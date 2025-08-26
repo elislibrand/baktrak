@@ -20,7 +20,7 @@ $ source venv/bin/activate
 
 Install the required packages:
 ```
-(venv) $ pip install -r requirements.txt
+(venv) $ pip3 install -r requirements.txt
 ```
 
 ## Dependencies
@@ -29,7 +29,7 @@ Python >= 3.13. Other versions may or may not work correctly.
 [FFmpeg](https://ffmpeg.org/) is also needed for processing non-WAV files, like MP3.
 
 ## Usage
-Run `main.py`:
+Run the program:
 ```
-$ python3 main.py
+(venv) $ python3 main.py
 ```
