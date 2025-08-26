@@ -33,7 +33,7 @@ def split_into_stems():
     separator = Separator(
         log_formatter = logging.Formatter('[%(module)s] %(message)s'),
         output_format = 'MP3',
-        output_dir = 'tmp/',
+        output_dir = 'tmp',
     )
     separator.load_model(model_filename = 'htdemucs_6s.yaml')
 
@@ -47,8 +47,8 @@ def split_into_stems():
     }
     output_files = separator.separate('tmp/yt.mp3', output_names)
 
-def bounce_stems():
-    ms = len(AudioSegment.from_mp3('tmp/yt.mp3'))
+def bounce_stems(stems_dir = 'tmp'):
+    ms = len(AudioSegment.from_file('tmp/yt.mp3', format = 'mp3'))
     mix = AudioSegment.silent(duration = ms)
 
     ignored_stems = [
@@ -56,49 +56,62 @@ def bounce_stems():
         'stem-guitar.mp3',
     ]
 
-    for f in os.listdir('tmp/'):
+    for f in os.listdir('tmp'):
         if f.lower().startswith('stem-') and f.lower().endswith('.mp3'):
             if f in ignored_stems:
                 continue
 
-            stem = AudioSegment.from_mp3(f'tmp/{f}')
+            stem = AudioSegment.from_file(f'tmp/{f}', format = 'mp3')
             mix = mix.overlay(stem, position = 0)
 
     mix.export('output/backing-track.mp3', format = 'mp3')
 
 def main():
-    source = input('URL or search term: ')
+    options = [
+        'URL or search term',
+        'already isolated stems',
+    ]
 
-    if not source.startswith('http'):
-        source = f'ytsearch:{source}'
+    print('Create a backing track from:')
 
-        info = json.loads(get_info_from_yt(source))
+    for i, option in enumerate(options):
+        print(f'  {i + 1}) {option}')
 
-        print(f"Found video with title '{info['entries'][0]['title']}'")
-        #input('Is this correct? [y/n] ')
+    print()
+
+    while not (0 < (choice := int(input('Choose an option: '))) <= len(options)):
+        print('Invalid option!')
 
     try:
         os.makedirs('tmp', exist_ok = True)
         os.makedirs('output', exist_ok = True)
 
-        download_from_yt(source)
+        if options[choice - 1] == 'URL or search term':
+            source = input('Enter URL or search term: ')
 
-        split_into_stems()
-        bounce_stems()
+            if not source.startswith('http'):
+                source = f'ytsearch:{source}'
+
+                info = json.loads(get_info_from_yt(source))
+
+                print(f"Found video with title '{info['entries'][0]['title']}'")
+                #input('Is this correct? [y/n] ')
+
+            download_from_yt(source)
+
+            split_into_stems()
+            bounce_stems()
+        elif options[choice - 1] == 'already isolated stems':
+            stems_dir = input('Enter path to stems directory: ')
+
+            bounce_stems(stems_dir = stems_dir)
+        else:
+            raise Exception('Unknown error')
+    except Exception as e:
+        raise e
     finally:
-        tmp_files = [
-            'tmp/yt.mp3',
-            'tmp/stem-vocals.mp3',
-            'tmp/stem-drums.mp3',
-            'tmp/stem-bass.mp3',
-            'tmp/stem-other.mp3',
-            'tmp/stem-guitar.mp3',
-            'tmp/stem-piano.mp3',
-        ]
-
-        for f in tmp_files:
-            if os.path.exists(f):
-                os.remove(f)
+        for f in os.listdir('tmp'):
+            os.remove(f'tmp/{f}')
 
 if __name__ == '__main__':
     main()
