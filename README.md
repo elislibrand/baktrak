@@ -27,3 +27,9 @@ Install the required packages:
 Python >= 3.13. Other versions may or may not work correctly.
 
 [FFmpeg](https://ffmpeg.org/) is also needed for processing non-WAV files, like MP3.
+
+## Usage
+Run `main.py`:
+```
+$ python3 main.py
+```
