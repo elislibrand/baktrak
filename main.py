@@ -15,7 +15,7 @@ ydl_opts = {
     #'extractor_args': {'youtube': {'player-client': ['default', '-tv', 'web_safari', 'web_embedded']}},
     'no_warnings': True,
     'noplaylist': True,
-    'outtmpl': f'tmp/source.%(ext)s',
+    'outtmpl': f'/tmp/baktrak/source.%(ext)s',
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'mp3',
@@ -37,7 +37,7 @@ def split_into_stems():
     separator = Separator(
         log_formatter = logging.Formatter('[%(module)s] %(message)s'),
         output_format = 'MP3',
-        output_dir = 'tmp',
+        output_dir = '/tmp/baktrak',
     )
     separator.load_model(model_filename = 'htdemucs_6s.yaml')
 
@@ -49,21 +49,21 @@ def split_into_stems():
         'Guitar': 'stem-guitar',
         'Piano': 'stem-piano',
     }
-    output_files = separator.separate('tmp/source.mp3', output_names)
+    output_files = separator.separate('/tmp/baktrak/source.mp3', output_names)
 
 def bounce_stems(exclude_instruments = []):
-    ms = len(AudioSegment.from_file('tmp/source.mp3', format = 'mp3'))
+    ms = len(AudioSegment.from_file('/tmp/baktrak/source.mp3', format = 'mp3'))
     mix = AudioSegment.silent(duration = ms)
 
-    for f in os.listdir('tmp'):
+    for f in os.listdir('/tmp/baktrak'):
         if f.startswith('stem-') and f.endswith('.mp3'):
             if f.removeprefix('stem-').removesuffix('.mp3') in exclude_instruments:
                 continue
 
-            stem = AudioSegment.from_file(f'tmp/{f}', format = 'mp3')
+            stem = AudioSegment.from_file(f'/tmp/baktrak/{f}', format = 'mp3')
             mix = mix.overlay(stem, position = 0)
 
-    mix.export('output/baktrak.mp3', format = 'mp3')
+    mix.export('baktrak.mp3', format = 'mp3')
 
 def main():
     parser = ArgumentParser(prog = 'baktrak')
@@ -80,8 +80,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        os.makedirs('tmp', exist_ok = True)
-        os.makedirs('output', exist_ok = True)
+        os.makedirs('/tmp/baktrak', exist_ok = True)
 
         if len(args.source) == 1:
             source = args.source[0]
@@ -89,7 +88,7 @@ def main():
             if validators.url(source):
                 download_from_yt(source)
             elif os.path.exists(source):
-                shutil.copy(source, 'tmp/source.mp3')
+                shutil.copy(source, '/tmp/baktrak/source.mp3')
             else:
                 raise Exception('Unknown error')
         elif len(args.source) > 1:
@@ -107,7 +106,7 @@ def main():
     except Exception as e:
         raise e
     finally:
-        shutil.rmtree('tmp/')
+        shutil.rmtree('/tmp/baktrak/')
 
 if __name__ == '__main__':
     main()
