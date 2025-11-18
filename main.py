@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 import json
 import shutil
-import yt_dlp
 import logging
-import argparse
 import validators
+from yt_dlp import YoutubeDL
 from pydub import AudioSegment
 #from pydub.effects import normalize
+from argparse import ArgumentParser
 from audio_separator.separator import Separator
 
 ydl_opts = {
@@ -25,13 +24,13 @@ ydl_opts = {
 }
 
 def get_info_from_yt(source):
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+    with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(source, download = False)
 
         return json.dumps(ydl.sanitize_info(info))
 
 def download_from_yt(source):
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+    with YoutubeDL(ydl_opts) as ydl:
         err = ydl.download(source)
 
 def split_into_stems():
@@ -67,7 +66,7 @@ def bounce_stems(exclude_instruments = []):
     mix.export('output/baktrak.mp3', format = 'mp3')
 
 def main():
-    parser = argparse.ArgumentParser(prog = 'baktrak')
+    parser = ArgumentParser(prog = 'baktrak')
 
     #parser.add_argument('source', nargs = '+', help = 'source to create the backing track from (can be either a YouTube URL, search term or path to a local audio file or already isolated stems)')
     parser.add_argument('source', nargs = '+', help = 'source to create the backing track from (can be either a YouTube URL, search term, or path to a local audio file)')
