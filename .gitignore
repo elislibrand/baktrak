@@ -210,3 +210,4 @@ __marimo__/
 *.swp
 tmp/
 output/
+build.sh
