@@ -6,9 +6,8 @@ import shutil
 import logging
 import validators
 from yt_dlp import YoutubeDL
-from pydub import AudioSegment
-#from pydub.effects import normalize
 from argparse import ArgumentParser
+from pydub import AudioSegment, effects
 from audio_separator.separator import Separator
 
 ydl_opts = {
@@ -63,6 +62,7 @@ def bounce_stems(exclude_instruments = []):
             stem = AudioSegment.from_file(f'/tmp/baktrak/{f}', format = 'mp3')
             mix = mix.overlay(stem, position = 0)
 
+    mix = effects.normalize(mix)
     mix.export('baktrak.mp3', format = 'mp3')
 
 def main():
@@ -78,6 +78,9 @@ def main():
     parser.add_argument('-v', '--no-vocals', action = 'append_const', dest = 'excluded', const = 'vocals', help = 'exclude vocals from the track')
 
     args = parser.parse_args()
+
+    if not args.excluded:
+        parser.error('at least one instrument must be excluded')
 
     try:
         os.makedirs('/tmp/baktrak', exist_ok = True)
