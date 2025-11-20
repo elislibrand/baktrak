@@ -2,34 +2,26 @@
 Generate custom backing tracks from YouTube videos, using stem separation and audio bouncing.
 
 ## Installation
-Clone the git repo and `cd` into it:
+Install on Linux:
 ```
-$ git clone https://github.com/elislibrand/baktrak.git
-$ cd baktrak/
-```
-
-Create a virtual environment:
-```
-$ python3 -m venv venv
+$ curl -LO https://github.com/elislibrand/baktrak/releases/latest/download/baktrak-linux-amd64.zip
+$ unzip baktrak-linux-amd64.zip -d ~/.local/bin/
 ```
 
-Activate the virtual environment:
+## Usage (examples)
+Create a backing track of *Paint It, Black* by *The Rolling Stones* for bass and guitar (exclude bass and guitars):
 ```
-$ source venv/bin/activate
+$ baktrak -bg the rolling stones paint it black
 ```
 
-Install the required packages:
+Create a backing track of *Beast Of Burden* by *The Rolling Stones* for vocals (exclude vocals):
 ```
-(venv) $ pip3 install -r requirements.txt
+$ baktrak -v the rolling stones beast of burden
 ```
+
+**Note:** it is also possible to provide a URL or path to a local audio file, instead of a search query.
 
 ## Dependencies
 Python >= 3.13. Other versions may or may not work correctly.
 
 [FFmpeg](https://ffmpeg.org/) is also needed for processing non-WAV files, like MP3.
-
-## Usage
-Run the program:
-```
-(venv) $ python3 main.py
-```
