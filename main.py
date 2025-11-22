@@ -5,13 +5,11 @@ import json
 import shutil
 import logging
 import validators
-from yt_dlp import YoutubeDL
 from argparse import ArgumentParser
-from pydub import AudioSegment, effects
-
 
 ydl_opts = {
     #'extractor_args': {'youtube': {'player-client': ['default', '-tv', 'web_safari', 'web_embedded']}},
+    'max_results': 1,
     'no_warnings': True,
     'noplaylist': True,
     'outtmpl': f'/tmp/baktrak/source.%(ext)s',
@@ -22,15 +20,18 @@ ydl_opts = {
     'quiet': True,
 }
 
-def get_info_from_yt(source):
-    with YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(source, download = False)
-
-        return json.dumps(ydl.sanitize_info(info))
-
 def download_from_yt(source):
+    from yt_dlp import YoutubeDL
+
     with YoutubeDL(ydl_opts) as ydl:
-        err = ydl.download(source)
+        info = ydl.extract_info(source, download = True)
+        sanitized_info = ydl.sanitize_info(info)
+
+        if 'entries' in info:
+            sanitized_info = sanitized_info['entries'][0]
+
+        title = sanitized_info['title']
+        print(f"Found source with title '{title}'")
 
 def split_into_stems():
     from audio_separator.separator import Separator
@@ -53,6 +54,8 @@ def split_into_stems():
     output_files = separator.separate('/tmp/baktrak/source.mp3', output_names)
 
 def bounce_stems(exclude_instruments = []):
+    from pydub import AudioSegment, effects
+
     ms = len(AudioSegment.from_file('/tmp/baktrak/source.mp3', format = 'mp3'))
     mix = AudioSegment.silent(duration = ms)
 
@@ -67,48 +70,59 @@ def bounce_stems(exclude_instruments = []):
     mix = effects.normalize(mix)
     mix.export('baktrak.mp3', format = 'mp3')
 
-def main():
-    parser = ArgumentParser(prog = 'baktrak')
+    print(f"Backing track written to: {os.path.abspath('baktrak.mp3')}")
 
-    #parser.add_argument('source', nargs = '+', help = 'source to create the backing track from (can be either a YouTube URL, search term or path to a local audio file or already isolated stems)')
+def main():
+    parser = ArgumentParser(prog = 'baktrak', prefix_chars = '-+')
+
     parser.add_argument('source', nargs = '+', help = 'source to create the backing track from (can be either a YouTube URL, search term, or path to a local audio file)')
-    parser.add_argument('-b', '--no-bass', action = 'append_const', dest = 'excluded', const = 'bass', help = 'exclude bass from the track')
-    parser.add_argument('-d', '--no-drums', action = 'append_const', dest = 'excluded', const = 'drums', help = 'exclude drums from the track')
-    parser.add_argument('-g', '--no-guitar', action = 'append_const', dest = 'excluded', const = 'guitar', help = 'exclude guitar from the track')
-    parser.add_argument('-o', '--no-other', action = 'append_const', dest = 'excluded', const = 'other', help = 'exclude other from the track')
-    parser.add_argument('-p', '--no-piano', action = 'append_const', dest = 'excluded', const = 'piano', help = 'exclude piano from the track')
-    parser.add_argument('-v', '--no-vocals', action = 'append_const', dest = 'excluded', const = 'vocals', help = 'exclude vocals from the track')
+
+    excluding = parser.add_argument_group('excluding instruments')
+    excluding.add_argument('-b', action = 'append_const', dest = 'excluded', const = 'bass', help = 'exclude bass from the track')
+    excluding.add_argument('-d', action = 'append_const', dest = 'excluded', const = 'drums', help = 'exclude drums from the track')
+    excluding.add_argument('-g', action = 'append_const', dest = 'excluded', const = 'guitar', help = 'exclude guitar from the track')
+    excluding.add_argument('-o', action = 'append_const', dest = 'excluded', const = 'other', help = 'exclude other from the track')
+    excluding.add_argument('-p', action = 'append_const', dest = 'excluded', const = 'piano', help = 'exclude piano from the track')
+    excluding.add_argument('-v', action = 'append_const', dest = 'excluded', const = 'vocals', help = 'exclude vocals from the track')
+
+    isolating = parser.add_argument_group('isolating instruments')
+    isolating.add_argument('+b', action = 'append_const', dest = 'isolated', const = 'bass', help = 'isolate bass in the track')
+    isolating.add_argument('+d', action = 'append_const', dest = 'isolated', const = 'drums', help = 'isolate drums in the track')
+    isolating.add_argument('+g', action = 'append_const', dest = 'isolated', const = 'guitar', help = 'isolate guitar in the track')
+    isolating.add_argument('+o', action = 'append_const', dest = 'isolated', const = 'other', help = 'isolate other in the track')
+    isolating.add_argument('+p', action = 'append_const', dest = 'isolated', const = 'piano', help = 'isolate piano in the track')
+    isolating.add_argument('+v', action = 'append_const', dest = 'isolated', const = 'vocals', help = 'isolate vocals in the track')
 
     args = parser.parse_args()
 
-    if not args.excluded:
-        parser.error('at least one instrument must be excluded')
+    if not args.excluded and not args.isolated:
+        parser.error('at least one instrument must be excluded (-) or isolated (+)')
+
+    if args.excluded and args.isolated:
+        parser.error('instruments cannot be both excluded (-) and isolated (+)')
+
+    excluded = args.excluded
+
+    if args.isolated:
+        excluded = list(set([a.const for a in parser._actions if a.dest == 'isolated']) - set(args.isolated))
 
     try:
         os.environ['CUDA_VISIBLE_DEVICES'] = ''
         os.makedirs('/tmp/baktrak', exist_ok = True)
 
-        if len(args.source) == 1:
-            source = args.source[0]
+        source = ' '.join(args.source)
 
-            if validators.url(source):
-                download_from_yt(source)
-            elif os.path.exists(source):
-                shutil.copy(source, '/tmp/baktrak/source.mp3')
-            else:
-                raise Exception('Unknown error')
-        elif len(args.source) > 1:
-            source = ' '.join(args.source)
-
-            info = json.loads(get_info_from_yt(f'ytsearch:{source}'))
-            print(f"Found video with title '{info['entries'][0]['title']}'")
-
-            download_from_yt(f'ytsearch:{source}')
+        if validators.url(source):
+            download_from_yt(source)
+        elif os.path.exists(source):
+            shutil.copy(source, '/tmp/baktrak/source.mp3')
         else:
-            raise Exception('Unknown error')
+            download_from_yt(f'ytsearch:{source}')
 
         split_into_stems()
-        bounce_stems(exclude_instruments = args.excluded)
+        bounce_stems(exclude_instruments = excluded)
+    except KeyboardInterrupt as e:
+        pass
     except Exception as e:
         raise e
     finally:
