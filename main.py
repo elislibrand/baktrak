@@ -8,7 +8,7 @@ import validators
 from yt_dlp import YoutubeDL
 from argparse import ArgumentParser
 from pydub import AudioSegment, effects
-from audio_separator.separator import Separator
+
 
 ydl_opts = {
     #'extractor_args': {'youtube': {'player-client': ['default', '-tv', 'web_safari', 'web_embedded']}},
@@ -33,6 +33,8 @@ def download_from_yt(source):
         err = ydl.download(source)
 
 def split_into_stems():
+    from audio_separator.separator import Separator
+
     separator = Separator(
         log_formatter = logging.Formatter('[%(module)s] %(message)s'),
         output_format = 'MP3',
@@ -83,6 +85,7 @@ def main():
         parser.error('at least one instrument must be excluded')
 
     try:
+        os.environ['CUDA_VISIBLE_DEVICES'] = ''
         os.makedirs('/tmp/baktrak', exist_ok = True)
 
         if len(args.source) == 1:
