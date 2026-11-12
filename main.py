@@ -5,23 +5,23 @@ import json
 import shutil
 import logging
 import validators
+from pathlib import Path
 from argparse import ArgumentParser
-
-ydl_opts = {
-    #'extractor_args': {'youtube': {'player-client': ['default', '-tv', 'web_safari', 'web_embedded']}},
-    'max_results': 1,
-    'no_warnings': True,
-    'noplaylist': True,
-    'outtmpl': f'/tmp/baktrak/source.%(ext)s',
-    'postprocessors': [{
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-    }],
-    'quiet': True,
-}
 
 def download_from_yt(source):
     from yt_dlp import YoutubeDL
+
+    ydl_opts = {
+        'max_results': 1,
+        'no_warnings': True,
+        'noplaylist': True,
+        'outtmpl': f'/tmp/baktrak/source.%(ext)s',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+        }],
+        'quiet': True,
+    }
 
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(source, download = True)
